@@ -10,7 +10,14 @@ Plaintext secrets are encrypted in the client browser using the WebCrypto API wi
 
 ## Features
 
-- Client-side encryption: Plaintext never leaves your browser unencrypted.
+- Client-side encryption: Plaintext and files never leave your browser unencrypted.
+- Secure file drop: Attach certificates (.pem), SSH keys, .env configurations, or documents up to 5 MB with client-side encryption and direct decrypted download.
+- Built-in credential generator: Generate random passwords, Diceware passphrases, API keys, and PINs directly inside the app.
+- Dynamic QR codes: Generate high-contrast QR codes for mobile camera scanning.
+- Anti-shoulder surfing: Mask secrets in public spaces with an interactive hold-to-peek control.
+- Auto-clear clipboard: Clears copied credentials from the system clipboard after 30 seconds.
+- Syntax highlighting: Automatically formats .env variables, JSON, and PEM certificates.
+- Sender revocation and receipts: Check delivery status (Active, Burned, Expired) and permanently destroy unread secrets using an authorized revocation token.
 - URL hash key isolation: Decryption keys remain in the client URL fragment per RFC 3986.
 - Atomic burn on read: Ciphertext is purged from the database upon the first successful retrieval.
 - Configurable expiration: Set secret lifetimes from 5 minutes to 7 days, backed by an automatic 60-second database cleanup job.

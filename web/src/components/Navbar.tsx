@@ -1,12 +1,13 @@
 import React from 'react';
-import { ShieldCheck, Lock } from 'lucide-react';
+import { ShieldCheck, Lock, History } from 'lucide-react';
 import { useTelegram } from '../hooks/useTelegram';
 
 interface NavbarProps {
   onOpenAudit: () => void;
+  onOpenHistory: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ onOpenAudit }) => {
+export const Navbar: React.FC<NavbarProps> = ({ onOpenAudit, onOpenHistory }) => {
   const { isTelegram, user } = useTelegram();
 
   return (
@@ -27,6 +28,15 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAudit }) => {
       </div>
 
       <div className="flex items-center space-x-2">
+        <button
+          onClick={onOpenHistory}
+          className="flex items-center space-x-1.5 text-xs font-medium text-slate-300 hover:text-cyan-400 px-2.5 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 transition-colors"
+          title="Sent Secrets & Revocation"
+        >
+          <History className="w-3.5 h-3.5 text-cyan-400" />
+          <span className="hidden sm:inline">Sent History</span>
+        </button>
+
         <button
           onClick={onOpenAudit}
           className="flex items-center space-x-1.5 text-xs font-medium text-slate-300 hover:text-emerald-400 px-2.5 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 transition-colors"

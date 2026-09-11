@@ -4,6 +4,7 @@ import { CreateSecret } from './components/CreateSecret';
 import { ShareModal } from './components/ShareModal';
 import { RevealSecret } from './components/RevealSecret';
 import { SecurityAuditModal } from './components/SecurityAuditModal';
+import { SentSecretsModal } from './components/SentSecretsModal';
 import { useTelegram } from './hooks/useTelegram';
 import { ShieldCheck } from 'lucide-react';
 
@@ -13,6 +14,8 @@ interface CreatedSecretData {
   hasPassphrase: boolean;
   expiresAt: number;
   burnAfterRead: boolean;
+  isFile?: boolean;
+  revocationToken?: string;
 }
 
 export const App: React.FC = () => {
@@ -21,9 +24,9 @@ export const App: React.FC = () => {
   const [claimId, setClaimId] = useState<string | null>(null);
   const [claimKey, setClaimKey] = useState<string | null>(null);
   const [isAuditOpen, setIsAuditOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   useEffect(() => {
-    // 1. Check URL parameters and hash fragment for secret ID and key
     const parseUrlParameters = () => {
       const hash = window.location.hash.startsWith('#')
         ? window.location.hash.slice(1)
@@ -34,7 +37,6 @@ export const App: React.FC = () => {
       let foundId: string | null = null;
       let foundKey: string | null = null;
 
-      // Extract ID from Telegram start_param, search query, or hash
       if (startParam) {
         foundId = startParam;
       } else if (searchParams.get('id')) {
@@ -47,7 +49,6 @@ export const App: React.FC = () => {
         foundId = hashParams.get('startapp');
       }
 
-      // Extract Key strictly from hash fragment (RFC 3986 client-side isolation)
       if (hashParams.get('key')) {
         foundKey = hashParams.get('key');
       } else if (hash.startsWith('key=')) {
@@ -67,13 +68,15 @@ export const App: React.FC = () => {
     setCreatedData(null);
     setClaimId(null);
     setClaimKey(null);
-    // Clean URL
     window.history.replaceState(null, '', window.location.pathname);
   };
 
   return (
     <div className="min-h-screen flex flex-col justify-between bg-vault-900 text-slate-100 font-sans selection:bg-emerald-500 selection:text-vault-900 pb-8">
-      <Navbar onOpenAudit={() => setIsAuditOpen(true)} />
+      <Navbar
+        onOpenAudit={() => setIsAuditOpen(true)}
+        onOpenHistory={() => setIsHistoryOpen(true)}
+      />
 
       <main className="flex-1 flex flex-col justify-center py-4">
         {claimId && claimKey ? (
@@ -86,6 +89,7 @@ export const App: React.FC = () => {
           <ShareModal
             data={createdData}
             onReset={handleReset}
+            onOpenHistory={() => setIsHistoryOpen(true)}
           />
         ) : (
           <CreateSecret
@@ -102,13 +106,18 @@ export const App: React.FC = () => {
           <span>Open Source E2EE</span>
         </div>
         <div className="flex items-center space-x-1">
-          <span>Encrypted with WebCrypto AES-GCM-256</span>
+          <span>WebCrypto AES-GCM-256 + PBKDF2</span>
         </div>
       </footer>
 
       <SecurityAuditModal
         isOpen={isAuditOpen}
         onClose={() => setIsAuditOpen(false)}
+      />
+
+      <SentSecretsModal
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
       />
     </div>
   );

@@ -11,7 +11,7 @@ export const config = {
   botUsername: process.env.BOT_USERNAME || 'peervault_drop_bot',
   miniAppShortName: process.env.MINI_APP_SHORT_NAME || 'app',
   publicAppUrl: process.env.PUBLIC_APP_URL || 'http://localhost:8080',
-  maxSecretPayloadBytes: parseInt(process.env.MAX_SECRET_PAYLOAD_BYTES || '65536', 10),
+  maxSecretPayloadBytes: parseInt(process.env.MAX_SECRET_PAYLOAD_BYTES || '10485760', 10), // 10MB limit
   rateLimitMax: parseInt(process.env.RATE_LIMIT_MAX || '100', 10),
   rateLimitWindowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 10),
   isDev: process.env.NODE_ENV !== 'production'

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Copy, Check, Send, RotateCcw, ShieldCheck, Flame, Clock } from 'lucide-react';
+import { Copy, Check, Send, RotateCcw, ShieldCheck, Flame, Clock, QrCode as QrIcon, History } from 'lucide-react';
 import { useTelegram } from '../hooks/useTelegram';
+import { QRCodeModal } from './QRCodeModal';
 
 interface ShareModalProps {
   data: {
@@ -9,14 +10,18 @@ interface ShareModalProps {
     hasPassphrase: boolean;
     expiresAt: number;
     burnAfterRead: boolean;
+    isFile?: boolean;
+    revocationToken?: string;
   };
   onReset: () => void;
+  onOpenHistory?: () => void;
 }
 
-export const ShareModal: React.FC<ShareModalProps> = ({ data, onReset }) => {
+export const ShareModal: React.FC<ShareModalProps> = ({ data, onReset, onOpenHistory }) => {
   const { haptic, shareViaTelegram } = useTelegram();
   const [copiedType, setCopiedType] = useState<'tg' | 'web' | null>(null);
   const [activeTab, setActiveTab] = useState<'tg' | 'web'>('tg');
+  const [isQROpen, setIsQROpen] = useState(false);
 
   const botUsername = 'peervault_drop_bot';
   const miniAppShortName = 'app';
@@ -39,7 +44,9 @@ export const ShareModal: React.FC<ShareModalProps> = ({ data, onReset }) => {
 
   const handleShareTelegram = () => {
     haptic.impact('medium');
-    const message = '🔒 I sent you an encrypted self-destructing secret via PeerVault Drop.';
+    const message = data.isFile
+      ? '📁 I sent you an encrypted self-destructing file via PeerVault Drop.'
+      : '🔒 I sent you an encrypted self-destructing secret via PeerVault Drop.';
     shareViaTelegram(message, telegramLink);
   };
 
@@ -56,7 +63,16 @@ export const ShareModal: React.FC<ShareModalProps> = ({ data, onReset }) => {
             <ShieldCheck className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-white">Secret Encrypted & Stored</h2>
+            <div className="flex items-center space-x-2">
+              <h2 className="text-base font-bold text-white">
+                {data.isFile ? 'File Encrypted & Stored' : 'Secret Encrypted & Stored'}
+              </h2>
+              {data.isFile && (
+                <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-400 border border-cyan-500/30">
+                  File Drop
+                </span>
+              )}
+            </div>
             <p className="text-xs text-slate-400">
               Only people with this secret link can decrypt the content.
             </p>
@@ -108,7 +124,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ data, onReset }) => {
         </div>
 
         {/* Link Display Box */}
-        <div className="relative mb-5">
+        <div className="relative mb-4">
           <input
             type="text"
             readOnly
@@ -133,28 +149,54 @@ export const ShareModal: React.FC<ShareModalProps> = ({ data, onReset }) => {
           </button>
         </div>
 
-        {/* Action Buttons */}
-        <div className="space-y-2.5">
+        {/* Quick actions: QR Code + Telegram Share */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-5">
           <button
             onClick={handleShareTelegram}
-            className="w-full py-3 px-4 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center space-x-2 shadow-lg shadow-cyan-600/20 transition-all cursor-pointer"
+            className="py-3 px-4 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center space-x-2 shadow-lg shadow-cyan-600/20 transition-all cursor-pointer"
           >
             <Send className="w-4 h-4" />
-            <span>Send to Telegram Chat</span>
+            <span>Send in Telegram</span>
           </button>
 
           <button
-            onClick={onReset}
-            className="w-full py-2.5 px-4 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-300 font-medium text-xs flex items-center justify-center space-x-2 border border-slate-700/60 transition-colors cursor-pointer"
+            onClick={() => setIsQROpen(true)}
+            className="py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs flex items-center justify-center space-x-2 border border-slate-700 transition-colors cursor-pointer"
           >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span>Create Another Secret</span>
+            <QrIcon className="w-4 h-4 text-emerald-400" />
+            <span>Show QR Code</span>
           </button>
         </div>
 
-        <div className="mt-5 p-3 rounded-xl bg-slate-900/60 border border-slate-800 text-[11px] text-slate-400">
-          <strong className="text-slate-300">Security Guarantee:</strong> The symmetric key is located strictly inside the hash fragment (<code className="text-emerald-400">#key=...</code>). It is processed locally on the client and is never transmitted over HTTP to our servers.
-        </div>
+        {/* Revocation & Sent history link */}
+        {data.revocationToken && onOpenHistory && (
+          <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 mb-5 flex items-center justify-between">
+            <div className="text-[11px] text-slate-400">
+              <span className="text-slate-300 font-semibold">Sent by mistake?</span> You can destroy this secret now.
+            </div>
+            <button
+              onClick={onOpenHistory}
+              className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 flex items-center space-x-1 cursor-pointer"
+            >
+              <History className="w-3.5 h-3.5" />
+              <span>Sent History</span>
+            </button>
+          </div>
+        )}
+
+        <button
+          onClick={onReset}
+          className="w-full py-2.5 px-4 rounded-xl bg-slate-800/60 hover:bg-slate-800 text-slate-400 hover:text-slate-200 font-medium text-xs flex items-center justify-center space-x-2 border border-slate-800 transition-colors cursor-pointer"
+        >
+          <RotateCcw className="w-3.5 h-3.5" />
+          <span>Create Another Secret</span>
+        </button>
+
+        <QRCodeModal
+          isOpen={isQROpen}
+          onClose={() => setIsQROpen(false)}
+          url={currentLink}
+        />
       </div>
     </div>
   );

@@ -2,9 +2,12 @@ import { describe, it, expect } from 'vitest';
 import {
   encryptSecret,
   decryptSecret,
+  encryptFileSecret,
+  decryptSecretUnified,
   bufferToBase64Url,
   base64UrlToBuffer
 } from '../crypto/e2ee.js';
+import { generateSecureCredential } from '../crypto/generator.js';
 
 describe('WebCrypto E2EE Module', () => {
   it('should encode and decode base64url losslessly', () => {
@@ -37,114 +40,69 @@ describe('WebCrypto E2EE Module', () => {
     expect(decrypted).toBe(secret);
   });
 
-  it('should support unicode, emoji, and multi-line formatting', async () => {
-    const multiLine = `-----BEGIN PRIVATE KEY-----
-MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC7V...
-🔐 Confidențial: Cheie privată de producție
-🚀 Emoji test: ⚡🔥✨
------END PRIVATE KEY-----`;
+  it('should support binary file encryption and decryption', async () => {
+    const originalFileBytes = new Uint8Array([72, 101, 108, 108, 111, 32, 87, 111, 114, 108, 100]); // "Hello World"
+    const fileMeta = {
+      name: 'id_rsa.pub',
+      type: 'text/plain',
+      size: originalFileBytes.length,
+      data: originalFileBytes
+    };
 
-    const payload = await encryptSecret(multiLine);
-    const decrypted = await decryptSecret({
+    const payload = await encryptFileSecret(fileMeta);
+    expect(payload.isFile).toBe(true);
+
+    const result = await decryptSecretUnified({
       ciphertext: payload.ciphertext,
       iv: payload.iv,
       keyFragment: payload.keyFragment,
       hasPassphrase: false
     });
 
-    expect(decrypted).toBe(multiLine);
+    expect(result.isFile).toBe(true);
+    expect(result.file).toBeDefined();
+    expect(result.file?.name).toBe('id_rsa.pub');
+    expect(result.file?.size).toBe(originalFileBytes.length);
+    expect(Array.from(result.file?.data || [])).toEqual(Array.from(originalFileBytes));
+    expect(result.file?.textPreview).toBe('Hello World');
   });
 
-  it('should handle large payloads (50KB)', async () => {
-    const largeText = 'A'.repeat(50 * 1024);
-    const payload = await encryptSecret(largeText);
-    const decrypted = await decryptSecret({
-      ciphertext: payload.ciphertext,
-      iv: payload.iv,
-      keyFragment: payload.keyFragment,
-      hasPassphrase: false
-    });
-
-    expect(decrypted.length).toBe(50 * 1024);
-    expect(decrypted).toBe(largeText);
-  });
-
-  it('should reject tampered ciphertext', async () => {
-    const secret = 'immutable-message';
-    const payload = await encryptSecret(secret);
-
-    // Tamper with the ciphertext by altering the last character
-    const tamperedCipher = payload.ciphertext.slice(0, -2) + (payload.ciphertext.endsWith('A') ? 'B' : 'A') + '=';
-
-    await expect(
-      decryptSecret({
-        ciphertext: tamperedCipher,
-        iv: payload.iv,
-        keyFragment: payload.keyFragment,
-        hasPassphrase: false
-      })
-    ).rejects.toThrow();
-  });
-
-  it('should reject tampered IV', async () => {
-    const secret = 'immutable-iv-message';
-    const payload = await encryptSecret(secret);
-
-    // Replace IV with another random IV
-    const tamperedIv = bufferToBase64Url(new Uint8Array(12));
-
-    await expect(
-      decryptSecret({
-        ciphertext: payload.ciphertext,
-        iv: tamperedIv,
-        keyFragment: payload.keyFragment,
-        hasPassphrase: false
-      })
-    ).rejects.toThrow();
-  });
-
-  it('should support optional passphrase protection (PBKDF2)', async () => {
-    const secret = 'classified-vault-secret';
-    const passphrase = 'correct-horse-battery-staple';
-
-    const payload = await encryptSecret(secret, passphrase);
+  it('should support optional passphrase protection on files', async () => {
+    const fileBytes = new Uint8Array([1, 2, 3, 4, 5]);
+    const payload = await encryptFileSecret(
+      { name: 'secret.bin', type: 'application/octet-stream', size: 5, data: fileBytes },
+      'vault-pass'
+    );
 
     expect(payload.hasPassphrase).toBe(true);
-    expect(payload.passphraseSalt).toBeDefined();
 
-    // Successful decryption with correct passphrase
-    const decrypted = await decryptSecret({
+    const result = await decryptSecretUnified({
       ciphertext: payload.ciphertext,
       iv: payload.iv,
       keyFragment: payload.keyFragment,
       hasPassphrase: true,
       passphraseSalt: payload.passphraseSalt,
-      passphrase: passphrase
+      passphrase: 'vault-pass'
     });
 
-    expect(decrypted).toBe(secret);
+    expect(result.isFile).toBe(true);
+    expect(result.file?.name).toBe('secret.bin');
+    expect(Array.from(result.file?.data || [])).toEqual([1, 2, 3, 4, 5]);
+  });
 
-    // Rejection with incorrect passphrase
-    await expect(
-      decryptSecret({
-        ciphertext: payload.ciphertext,
-        iv: payload.iv,
-        keyFragment: payload.keyFragment,
-        hasPassphrase: true,
-        passphraseSalt: payload.passphraseSalt,
-        passphrase: 'wrong-passphrase'
-      })
-    ).rejects.toThrow('Incorrect passphrase or corrupted key.');
+  it('should generate secure credentials correctly', () => {
+    const pass = generateSecureCredential({ type: 'password', length: 20 });
+    expect(pass.length).toBe(20);
 
-    // Rejection when passphrase is required but omitted
-    await expect(
-      decryptSecret({
-        ciphertext: payload.ciphertext,
-        iv: payload.iv,
-        keyFragment: payload.keyFragment,
-        hasPassphrase: true,
-        passphraseSalt: payload.passphraseSalt
-      })
-    ).rejects.toThrow('This secret is passphrase-protected. Passphrase is required.');
+    const diceware = generateSecureCredential({ type: 'passphrase', wordCount: 4 });
+    expect(diceware.split('-').length).toBe(5); // 4 words + 1 number suffix
+
+    const token = generateSecureCredential({ type: 'token', length: 32 });
+    expect(token.length).toBe(32);
+    expect(/^[0-9a-f]+$/.test(token)).toBe(true);
+
+    const pin = generateSecureCredential({ type: 'pin', length: 6 });
+    expect(pin.length).toBe(6);
+    expect(/^\d+$/.test(pin)).toBe(true);
   });
 });

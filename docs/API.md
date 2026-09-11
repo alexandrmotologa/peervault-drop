@@ -63,7 +63,9 @@ curl -X POST http://localhost:8080/api/secret \
 {
   "id": "v1StGXR8_Z5jd8Lk",
   "expires_at": 1773415600000,
-  "burn_after_read": true
+  "burn_after_read": true,
+  "is_file": false,
+  "revocation_token": "k9L1pA8vX2bC5mN0qW4eR7tY1uI3oP6s"
 }
 ```
 
@@ -103,6 +105,7 @@ curl http://localhost:8080/api/secret/v1StGXR8_Z5jd8Lk
   "iv": "cmFuZG9tLWl2LXZhbHVl",
   "burn_after_read": true,
   "has_passphrase": false,
+  "is_file": false,
   "burned": true
 }
 ```
@@ -112,3 +115,55 @@ curl http://localhost:8080/api/secret/v1StGXR8_Z5jd8Lk
 - `404 Not Found`: Secret does not exist, has expired, or has already been burned.
 - `400 Bad Request`: Invalid identifier format.
 - `429 Too Many Requests`: Rate limit exceeded.
+
+---
+
+### 4. Revoke secret (sender only)
+
+Destroys the secret permanently before it is claimed. Requires the private `revocation_token` provided during creation.
+
+- Method: `POST`
+- Path: `/api/secret/:id/revoke`
+- Auth: Revocation Token in body
+
+#### Request body
+
+```json
+{
+  "revocation_token": "k9L1pA8vX2bC5mN0qW4eR7tY1uI3oP6s"
+}
+```
+
+#### Response (200 OK)
+
+```json
+{
+  "success": true,
+  "id": "v1StGXR8_Z5jd8Lk",
+  "status": "burned",
+  "message": "Secret destroyed permanently from server."
+}
+```
+
+---
+
+### 5. Check secret delivery status
+
+Returns anonymous delivery status without revealing secret contents.
+
+- Method: `GET`
+- Path: `/api/secret/:id/status`
+- Auth: None
+
+#### Response (200 OK)
+
+```json
+{
+  "id": "v1StGXR8_Z5jd8Lk",
+  "status": "burned",
+  "created_at": 1773412000000,
+  "expires_at": 1773415600000,
+  "burned_at": 1773412150000,
+  "is_file": false
+}
+```

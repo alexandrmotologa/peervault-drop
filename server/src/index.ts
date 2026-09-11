@@ -16,7 +16,8 @@ const __dirname = path.dirname(__filename);
 
 async function bootstrap() {
   const fastify = Fastify({
-    logger: true
+    logger: true,
+    bodyLimit: 15 * 1024 * 1024 // 15MB max body size for files
   });
 
   // 1. Cross-Origin Resource Sharing

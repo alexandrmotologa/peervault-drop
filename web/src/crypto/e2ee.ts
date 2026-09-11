@@ -2,7 +2,7 @@
  * PeerVault Drop - Client-Side Zero-Knowledge Cryptographic Engine
  *
  * Implements AES-GCM-256 authenticated encryption using WebCrypto API.
- * Plaintext secrets never leave the client device unencrypted.
+ * Plaintext secrets and files never leave the client device unencrypted.
  * Decryption keys are stored strictly in the URL hash fragment (#key=...)
  * which browsers never transmit to web servers over HTTP.
  */
@@ -13,6 +13,7 @@ export interface EncryptedPayload {
   keyFragment: string;
   hasPassphrase: boolean;
   passphraseSalt?: string;
+  isFile?: boolean;
 }
 
 export interface DecryptOptions {
@@ -24,9 +25,20 @@ export interface DecryptOptions {
   passphrase?: string;
 }
 
-/**
- * Resolves WebCrypto subtle instance in both Browser and Node.js environments.
- */
+export interface DecryptedFile {
+  name: string;
+  type: string;
+  size: number;
+  data: Uint8Array;
+  textPreview?: string;
+}
+
+export interface DecryptResult {
+  isFile: boolean;
+  text: string;
+  file?: DecryptedFile;
+}
+
 function getCryptoSubtle(): SubtleCrypto {
   if (typeof globalThis !== 'undefined' && globalThis.crypto && globalThis.crypto.subtle) {
     return globalThis.crypto.subtle;
@@ -42,9 +54,6 @@ function getRandomBytes(length: number): Uint8Array {
   throw new Error('WebCrypto getRandomValues is not available.');
 }
 
-/**
- * Converts ArrayBuffer / Uint8Array to RFC 4648 Base64URL string (no padding).
- */
 export function bufferToBase64Url(buffer: ArrayBuffer | Uint8Array): string {
   const uint8 = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
   let binary = '';
@@ -56,9 +65,6 @@ export function bufferToBase64Url(buffer: ArrayBuffer | Uint8Array): string {
   return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-/**
- * Converts RFC 4648 Base64URL string back to Uint8Array.
- */
 export function base64UrlToBuffer(base64url: string): Uint8Array {
   let base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
   while (base64.length % 4 !== 0) {
@@ -72,9 +78,6 @@ export function base64UrlToBuffer(base64url: string): Uint8Array {
   return bytes;
 }
 
-/**
- * Derives a 256-bit AES-GCM key from a passphrase using PBKDF2 (100,000 iterations, SHA-256).
- */
 async function derivePassphraseKey(passphrase: string, salt: Uint8Array): Promise<CryptoKey> {
   const subtle = getCryptoSubtle();
   const encoder = new TextEncoder();
@@ -102,7 +105,6 @@ async function derivePassphraseKey(passphrase: string, salt: Uint8Array): Promis
 
 /**
  * Encrypts plaintext string using AES-GCM-256.
- * If optionalPassphrase is provided, the data key is wrapped with a PBKDF2-derived key.
  */
 export async function encryptSecret(
   plaintext: string,
@@ -111,14 +113,12 @@ export async function encryptSecret(
   const subtle = getCryptoSubtle();
   const encoder = new TextEncoder();
 
-  // 1. Generate primary 256-bit AES-GCM key
   const dataKey = await subtle.generateKey(
     { name: 'AES-GCM', length: 256 },
     true,
     ['encrypt', 'decrypt']
   );
 
-  // 2. Encrypt plaintext
   const iv = getRandomBytes(12);
   const plaintextBytes = encoder.encode(plaintext);
   const ciphertextBuffer = await subtle.encrypt(
@@ -129,7 +129,6 @@ export async function encryptSecret(
 
   const rawDataKey = await subtle.exportKey('raw', dataKey);
 
-  // 3. Handle optional passphrase protection
   if (optionalPassphrase && optionalPassphrase.trim().length > 0) {
     const salt = getRandomBytes(16);
     const wrapKey = await derivePassphraseKey(optionalPassphrase.trim(), salt);
@@ -141,7 +140,6 @@ export async function encryptSecret(
       rawDataKey
     );
 
-    // Combine wrapIv (12 bytes) + wrappedKeyBuffer for keyFragment
     const combined = new Uint8Array(wrapIv.length + wrappedKeyBuffer.byteLength);
     combined.set(wrapIv, 0);
     combined.set(new Uint8Array(wrappedKeyBuffer), wrapIv.length);
@@ -151,7 +149,8 @@ export async function encryptSecret(
       iv: bufferToBase64Url(iv),
       keyFragment: bufferToBase64Url(combined),
       hasPassphrase: true,
-      passphraseSalt: bufferToBase64Url(salt)
+      passphraseSalt: bufferToBase64Url(salt),
+      isFile: false
     };
   }
 
@@ -159,15 +158,42 @@ export async function encryptSecret(
     ciphertext: bufferToBase64Url(ciphertextBuffer),
     iv: bufferToBase64Url(iv),
     keyFragment: bufferToBase64Url(rawDataKey),
-    hasPassphrase: false
+    hasPassphrase: false,
+    isFile: false
   };
 }
 
 /**
- * Decrypts ciphertext using keyFragment and IV.
- * If secret was encrypted with a passphrase, passphrase must be provided.
+ * Encrypts a binary file or document.
+ */
+export async function encryptFileSecret(
+  file: { name: string; type: string; size: number; data: Uint8Array },
+  optionalPassphrase?: string
+): Promise<EncryptedPayload> {
+  const envelope = JSON.stringify({
+    __pv_file: true,
+    name: file.name,
+    type: file.type || 'application/octet-stream',
+    size: file.size,
+    dataBase64: bufferToBase64Url(file.data)
+  });
+
+  const encrypted = await encryptSecret(envelope, optionalPassphrase);
+  return {
+    ...encrypted,
+    isFile: true
+  };
+}
+
+/**
+ * Decrypts ciphertext and unpacks either plaintext text or decrypted file.
  */
 export async function decryptSecret(options: DecryptOptions): Promise<string> {
+  const result = await decryptSecretUnified(options);
+  return result.text;
+}
+
+export async function decryptSecretUnified(options: DecryptOptions): Promise<DecryptResult> {
   const subtle = getCryptoSubtle();
   const { ciphertext, iv, keyFragment, hasPassphrase, passphraseSalt, passphrase } = options;
 
@@ -206,7 +232,6 @@ export async function decryptSecret(options: DecryptOptions): Promise<string> {
     rawDataKeyBytes = base64UrlToBuffer(keyFragment);
   }
 
-  // Import data key for decryption
   const dataKey = await subtle.importKey(
     'raw',
     rawDataKeyBytes as BufferSource,
@@ -225,7 +250,50 @@ export async function decryptSecret(options: DecryptOptions): Promise<string> {
       cipherBytes as BufferSource
     );
 
-    return new TextDecoder().decode(decryptedBuffer);
+    const decoded = new TextDecoder().decode(decryptedBuffer);
+
+    // Check if decrypted payload is an encapsulated file
+    if (decoded.startsWith('{"__pv_file":true,')) {
+      try {
+        const parsed = JSON.parse(decoded);
+        if (parsed.__pv_file) {
+          const fileBytes = base64UrlToBuffer(parsed.dataBase64);
+          let textPreview: string | undefined;
+
+          // If text, JSON, or certificate, decode text preview
+          const isTextual = parsed.type.includes('text') ||
+            parsed.type.includes('json') ||
+            parsed.type.includes('yaml') ||
+            parsed.name.endsWith('.env') ||
+            parsed.name.endsWith('.pem') ||
+            parsed.name.endsWith('.key') ||
+            parsed.name.endsWith('.txt');
+
+          if (isTextual && fileBytes.length < 100000) {
+            try {
+              textPreview = new TextDecoder().decode(fileBytes);
+            } catch {}
+          }
+
+          return {
+            isFile: true,
+            text: textPreview || `[Encrypted File: ${parsed.name} (${parsed.size} bytes)]`,
+            file: {
+              name: parsed.name,
+              type: parsed.type,
+              size: parsed.size,
+              data: fileBytes,
+              textPreview
+            }
+          };
+        }
+      } catch {}
+    }
+
+    return {
+      isFile: false,
+      text: decoded
+    };
   } catch {
     throw new Error('Decryption failed. The secret has been tampered with or the link is invalid.');
   }
