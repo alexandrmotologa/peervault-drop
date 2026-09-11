@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" fill="none">
+  <defs>
+    <linearGradient id="shieldGrad" x1="10" y1="10" x2="110" y2="110" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0F172A" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="20" y1="20" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#10B981" />
+      <stop offset="50%" stop-color="#06B6D4" />
+      <stop offset="100%" stop-color="#3B82F6" />
+    </linearGradient>
+    <linearGradient id="glowGrad" x1="60" y1="20" x2="60" y2="100" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#10B981" stop-opacity="0.3" />
+      <stop offset="100%" stop-color="#06B6D4" stop-opacity="0" />
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#10B981" flood-opacity="0.25" />
+    </filter>
+  </defs>
+
+  <!-- Base Squircle -->
+  <rect x="8" y="8" width="104" height="104" rx="26" fill="url(#shieldGrad)" stroke="url(#accentGrad)" stroke-width="2.5" />
+  
+  <!-- Subtle Internal Grid Glow -->
+  <circle cx="60" cy="60" r="38" fill="url(#glowGrad)" />
+
+  <!-- Shield Shape Path -->
+  <path d="M60 26 L86 37 V58 C86 73 75 87 60 93 C45 87 34 73 34 58 V37 Z" 
+        stroke="url(#accentGrad)" stroke-width="2.5" stroke-linejoin="round" fill="#0B132B" fill-opacity="0.7" filter="url(#shadow)" />
+
+  <!-- Shackle (Lock Arch) -->
+  <path d="M52 50 V42 C52 37.5817 55.5817 34 60 34 C64.4183 34 68 37.5817 68 42 V50" 
+        stroke="#F8FAFC" stroke-width="2.8" stroke-linecap="round" />
+
+  <!-- Padlock Body -->
+  <rect x="47" y="50" width="26" height="22" rx="5" fill="url(#accentGrad)" />
+
+  <!-- Keyhole -->
+  <circle cx="60" cy="59" r="2.5" fill="#0F172A" />
+  <path d="M58.8 60.5 L58 66 H62 L61.2 60.5 Z" fill="#0F172A" />
+
+  <!-- Digital Circuit Nodes -->
+  <circle cx="28" cy="28" r="2" fill="#10B981" />
+  <circle cx="92" cy="92" r="2" fill="#06B6D4" />
+  <circle cx="92" cy="28" r="2" fill="#3B82F6" />
+  <circle cx="28" cy="92" r="2" fill="#10B981" />
+  <path d="M28 28 L36 36 M84 84 L92 92 M92 28 L84 36 M36 84 L28 92" stroke="#334155" stroke-width="1.5" stroke-linecap="round" />
+</svg>

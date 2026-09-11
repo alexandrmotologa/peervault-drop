@@ -1,0 +1,32 @@
+{
+  "name": "peervault-drop",
+  "version": "1.0.0",
+  "description": "Zero-knowledge ephemeral secret sharing for Telegram Mini Apps and the web",
+  "private": true,
+  "workspaces": [
+    "server",
+    "web"
+  ],
+  "scripts": {
+    "dev:server": "npm --workspace=server run dev",
+    "dev:web": "npm --workspace=web run dev",
+    "dev": "npm --workspace=server run dev",
+    "build": "npm --workspace=web run build && npm --workspace=server run build",
+    "test": "npm --workspace=web run test && npm --workspace=server run test",
+    "start": "npm --workspace=server start"
+  },
+  "keywords": [
+    "zero-knowledge",
+    "telegram-mini-app",
+    "e2ee",
+    "aes-gcm",
+    "webcrypto",
+    "ephemeral-secrets",
+    "burn-after-reading",
+    "fastify",
+    "grammy",
+    "react"
+  ],
+  "author": "Alexandru Motologa",
+  "license": "MIT"
+}

@@ -1,0 +1,26 @@
+services:
+  peervault-drop:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: peervault-drop
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8080}:8080"
+    environment:
+      - NODE_ENV=production
+      - PORT=8080
+      - HOST=0.0.0.0
+      - DATA_DIR=/data
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - BOT_USERNAME=${BOT_USERNAME:-peervault_drop_bot}
+      - MINI_APP_SHORT_NAME=${MINI_APP_SHORT_NAME:-app}
+      - PUBLIC_APP_URL=${PUBLIC_APP_URL:-http://localhost:8080}
+      - RATE_LIMIT_MAX=100
+      - RATE_LIMIT_WINDOW_MS=60000
+    volumes:
+      - peervault_data:/data
+
+volumes:
+  peervault_data:
+    driver: local
