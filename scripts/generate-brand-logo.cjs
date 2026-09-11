@@ -1,4 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+const fs = require('fs');
+const path = require('path');
+const { Resvg } = require('@resvg/resvg-js');
+
+function buildLogoSvg() {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
   <defs>
     <clipPath id="squircle-clip">
       <rect x="24" y="24" width="976" height="976" rx="220" />
@@ -148,4 +153,33 @@
 
     </g>
   </g>
-</svg>
+</svg>`;
+}
+
+async function main() {
+  const imagesDir = path.resolve(__dirname, '../docs/images');
+  if (!fs.existsSync(imagesDir)) {
+    fs.mkdirSync(imagesDir, { recursive: true });
+  }
+
+  const svg = buildLogoSvg();
+  const svgPath = path.join(imagesDir, 'logo.svg');
+  const pngPath = path.join(imagesDir, 'logo.png');
+
+  fs.writeFileSync(svgPath, svg, 'utf8');
+  console.log('✓ Wrote docs/images/logo.svg');
+
+  const resvg = new Resvg(svg, {
+    fitTo: { mode: 'width', value: 1024 }
+  });
+  const pngData = resvg.render().asPng();
+  fs.writeFileSync(pngPath, pngData);
+  console.log('✓ Rendered docs/images/logo.png at 1024x1024');
+
+  // Also copy to web/public/logo.svg so Mini App has the brand emblem
+  const webPublicLogo = path.resolve(__dirname, '../web/public/logo.svg');
+  fs.writeFileSync(webPublicLogo, svg, 'utf8');
+  console.log('✓ Updated web/public/logo.svg');
+}
+
+main().catch(console.error);

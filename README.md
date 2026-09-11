@@ -1,12 +1,62 @@
 <p align="center">
-  <img src="web/public/logo.svg" width="100" height="100" alt="PeerVault Drop Logo" />
+  <img src="docs/images/logo.png?raw=true" alt="PeerVault Drop Logo" width="140" style="border-radius: 28px;" />
 </p>
 
-# PeerVault Drop
+<h1 align="center">PeerVault Drop</h1>
 
-Zero-knowledge ephemeral secret sharing for Telegram Mini Apps and web browsers.
+<p align="center">
+  Zero-knowledge ephemeral secret sharing for Telegram Mini Apps and web browsers.
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/license-MIT-emerald.svg" alt="License MIT" />
+  <img src="https://img.shields.io/badge/encryption-AES--GCM--256-cyan.svg" alt="AES-GCM-256" />
+  <img src="https://img.shields.io/badge/kdf-PBKDF2--100k-purple.svg" alt="PBKDF2" />
+  <img src="https://img.shields.io/badge/telegram-Mini%20App-blue.svg" alt="Telegram Mini App" />
+</p>
+
+---
 
 Plaintext secrets are encrypted in the client browser using the WebCrypto API with AES-GCM-256. The symmetric key is stored only in the URL hash fragment (`#key=...`), which browsers do not transmit over HTTP to web servers. The backend server stores only ciphertext and expiration metadata, with automatic deletion on first read.
+
+## Brand Mascot: The Stealth Falcon
+
+The official mascot of PeerVault Drop is the **Stealth Falcon**. Renowned in nature for its rapid aerial drop, the falcon represents silent, direct delivery of sensitive information. Its folded low-poly obsidian wings form an interlocking vault fortress around an emerald-cyan cryptographic keyhole shield, guarding the plaintext until the intended recipient opens it.
+
+---
+
+## Visual Walkthrough & Screenshots
+
+### 1. Creation & Tools
+
+| Main Secret Form | Built-in Credential Generator |
+| :---: | :---: |
+| ![Main Secret Creation](docs/images/01-main-screen.png?raw=true) | ![Credential Generator](docs/images/02-credential-generator.png?raw=true) |
+| *Monospace input with byte counter, TTL selector, and burn options* | *Cryptographically secure passwords, Diceware passphrases, tokens, and PINs* |
+
+| Secure File Drop (Max 5MB) | Dynamic QR Code Scanner |
+| :---: | :---: |
+| ![Secure File Drop](docs/images/03-secure-file-drop.png?raw=true) | ![QR Code Modal](docs/images/05-qr-code.png?raw=true) |
+| *Client-side encryption for .env, SSH keys, certificates, or configs* | *High-contrast QR code for instant mobile camera scanning* |
+
+### 2. Delivery & Decryption
+
+| Share Modal (Telegram & Web Links) | Decrypted Secret (Syntax Formatted) |
+| :---: | :---: |
+| ![Share Modal](docs/images/04-share-modal.png?raw=true) | ![Decrypted Secret](docs/images/06-reveal-decrypted.png?raw=true) |
+| *1-click copy, Telegram share, and revocation token tracker* | *Automatic .env/JSON syntax highlighting with Hold to Peek masking* |
+
+| Auto-Clear Clipboard Protection | Sent Secrets Dashboard (Revocation) |
+| :---: | :---: |
+| ![Auto-Clear Clipboard](docs/images/07-auto-clear-clipboard.png?raw=true) | ![Sent Secrets Dashboard](docs/images/08-sent-secrets-dashboard.png?raw=true) |
+| *30-second countdown before clearing clipboard memory* | *Delivery status receipts with instant Destroy Now revocation button* |
+
+| Cryptographic Audit Model | Atomic Burn Verification |
+| :---: | :---: |
+| ![Security Audit Modal](docs/images/09-security-audit.png?raw=true) | ![Burned Secret Verification](docs/images/10-burned-confirmation.png?raw=true) |
+| *Interactive explanation of client-side WebCrypto and RFC 3986 isolation* | *Server returns 404 once read; records are purged permanently* |
+
+---
 
 ## Features
 
@@ -29,7 +79,7 @@ Plaintext secrets are encrypted in the client browser using the WebCrypto API wi
 
 The service relies on the browser WebCrypto standard (`window.crypto.subtle`):
 
-1. The sender creates a message in the browser.
+1. The sender creates a message or drops a file in the browser.
 2. The browser generates a random 256-bit AES-GCM key and a 96-bit initialization vector (IV).
 3. The browser encrypts the plaintext into ciphertext.
 4. The client sends only the ciphertext, IV, and expiration options to `POST /api/secret`.
@@ -40,7 +90,7 @@ The service relies on the browser WebCrypto standard (`window.crypto.subtle`):
 7. The recipient opens the link. The client extracts the secret ID from query parameters and the key from the URL hash.
 8. The client fetches the ciphertext from `GET /api/secret/:id`.
 9. The backend returns the ciphertext and deletes the record from the database if burn-on-read is enabled.
-10. The recipient browser decrypts the ciphertext locally and displays the plaintext.
+10. The recipient browser decrypts the ciphertext locally and displays the plaintext or triggers the decrypted file download.
 
 ## Quickstart
 
@@ -124,6 +174,7 @@ peervault-drop/
 │   │   └── App.tsx      Application shell
 │   └── package.json
 ├── docs/                Architecture, security, and API documentation
+│   └── images/          Official mascot logo and UI screenshots
 ├── Dockerfile           Multi-stage container build
 └── docker-compose.yml   Production compose file
 ```
